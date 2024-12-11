@@ -1,0 +1,34 @@
+services:
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    volumes:
+      - ./loki-config.yml:/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100" # Expone Loki para uso externo
+    networks:
+      - loki-network
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "-O-", "http://localhost:3100/ready"]
+      interval: 5s       # Verifica la salud cada 5 segundos
+      timeout: 3s        # Tiempo de espera por respuesta
+      retries: 5         # Reintentos antes de marcar como no saludable
+      start_period: 15s  # Tiempo de gracia para que el servicio inicie
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000" # Expone Grafana para acceso externo
+    networks:
+      - loki-network
+    depends_on:
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  loki-network:
+    driver: bridge # Configuración explícita para claridad
